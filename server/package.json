@@ -1,0 +1,31 @@
+{
+  "name": "techx_api",
+  "version": "1.0.0",
+  "description": "api for the techx mobile app",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon app.js"
+  },
+  "keywords": [
+    "techx"
+  ],
+  "author": "page-innovations",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.7.9",
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "crypto": "^1.0.1",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-fileupload": "^1.5.1",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.9.6",
+    "nodemailer": "^6.10.0",
+    "nodemon": "^3.1.9",
+    "paystack": "^2.0.1"
+  }
+}
