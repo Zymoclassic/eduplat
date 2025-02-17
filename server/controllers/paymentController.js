@@ -30,10 +30,10 @@ const updateMarketerBalance = async (studentId, amount) => {
 // Initialize Payment
 const initializePayment = async (req, res, next) => {
     try {
-        const { email, courseId, paymentStructure } = req.body;
+        const { email, courseId, paymentStructure, learningMode } = req.body;
 
         // Validate request data
-        if (!email || !courseId || !paymentStructure) {
+        if (!email || !courseId || !paymentStructure || !learningMode) {
             return res.status(400).json({ message: "Email, courseId, and paymentStructure are required!" });
         }
 
@@ -60,7 +60,7 @@ const initializePayment = async (req, res, next) => {
             {
                 email,
                 amount: amount * 100, // Convert to kobo
-                metadata: { courseId },
+                metadata: { courseId, learningMode, paymentStructure },
             },
             {
                 headers: {
