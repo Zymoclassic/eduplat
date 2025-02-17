@@ -84,7 +84,7 @@ const studentSchema = new Schema({
     },
     transactions: [
         {
-            reference: {type: String, required: true, unique: true},
+            reference: {type: String, required: true},
             amount: {type: Number, required: true},
             status: {type: String, enum: ["pending", "success", "failed"], default: "pending"},
             transactionDate: {type: Date, default: Date.now}
