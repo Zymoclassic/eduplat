@@ -131,7 +131,7 @@ const handleWebhook = async (req, res) => {
             const reference = req.body.data.reference;
             const status = req.body.data.status;
             const metadata = req.body.data.metadata || {}; // Extract metadata
-            const { courseId } = metadata; 
+            const { courseId, learningMode, paymentStructure } = metadata;
 
             // Ensure courseId is provided
             if (!courseId) {
@@ -190,6 +190,9 @@ const handleWebhook = async (req, res) => {
             // Add ₦20,000 to student balance for any payment
             user.balance += 20000;
             console.log(`Student ${user.email} credited with ₦20,000.`);
+
+            user.learningMode = learningMode;
+            user.paymentStructure = paymentStructure;
 
             await user.save();
             console.log(`Transaction ${reference} recorded for ${user.email}.`);
