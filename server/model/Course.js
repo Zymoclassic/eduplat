@@ -18,10 +18,10 @@ const courseSchema = new Schema({
         required: true,
         min: 0
     },
-    duration: [{
+    duration: {
         type: String,
         required: true
-    }],
+    },
     studentsEnrolled: [{
         type: mongoose.Types.ObjectId,
         ref: "Student"

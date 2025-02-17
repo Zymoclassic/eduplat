@@ -59,7 +59,7 @@ const studentSchema = new Schema({
     },
     paymentStructure: {
         type: String,
-        enums: ["full", "50/50", "40/30/30"]
+        enums: ["full", "half"]
     },
     learningMode: {
         type: String,
@@ -67,10 +67,18 @@ const studentSchema = new Schema({
     },
     paymentStatus: {
         type: String,
-        default: "Incomplete",
-        enums: ["completed", "incomplete"]
+        default: "unpaid",
+        enums: ["completed", "partial", "unpaid"]
     },
     balance: {
+        type: Number,
+        default: 0
+    },
+    amountPayable: {
+        type: Number,
+        default: 0
+    },
+    amountPaid: {
         type: Number,
         default: 0
     },
