@@ -10,19 +10,19 @@ dotenv.config();
 
 // Setup nodemailer transporter
 const transporter = nodemailer.createTransport({
-    host: process.env.HOST,
-    port: 587,
-    secure: false,
+    service: "gmail",
+    port: 465,
+    secure: true,
     auth: {
         user: process.env.EMAIL,
         pass: process.env.PASSWORD
-    },
+    }
 });
 
 
 // Sign up
 const signUp = async (req, res, next) => {
-    const { firstName, lastName, email, password, confirmPassword, phoneNumber, location, userType, referrerID } = req.body; // referrerID included
+    const { firstName, lastName, email, password, confirmPassword, phoneNumber, location, userType, referrerID } = req.body; 
 
     if (!firstName || !lastName || !email || !password || !phoneNumber || !location || !userType) {
         return res.status(400).json({ message: "Fill in all details" });
@@ -64,7 +64,7 @@ const signUp = async (req, res, next) => {
     }
 
     const otp = Math.floor(1000 + Math.random() * 9000).toString();
-    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // OTP expires in 10 minutes
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
 
     const userData = {
         firstName,
@@ -79,19 +79,13 @@ const signUp = async (req, res, next) => {
         emailVerified: false,
     };
 
-    // Initialize newReferrerID variable
     let newReferrerID = null;
 
     if (userType.toLowerCase() === "student") {
-        // Check if referrerID is provided in the request
         if (referrerID) {
-            console.log('ReferrerID provided:', referrerID);
-
             try {
-                // Check if marketer exists
                 const marketer = await Marketer.findOne({ marketerId: referrerID });
                 if (marketer) {
-                    // Assign newReferrerID to marketer's _id
                     newReferrerID = marketer._id;
                 } else {
                     return res.status(400).json({ message: "Invalid marketerId. No such marketer exists." });
@@ -100,31 +94,27 @@ const signUp = async (req, res, next) => {
                 return res.status(500).json({ message: "Error fetching marketer data." });
             }
 
-            // Check if newReferrerID is valid
             if (!mongoose.Types.ObjectId.isValid(newReferrerID)) {
                 return res.status(400).json({ message: "Invalid referrer ID format." });
             }
 
-            // Assign newReferrerID to userData
             const referrer = await Marketer.findById(newReferrerID);
             if (!referrer) {
                 return res.status(400).json({ message: "Referrer not found. Please enter a valid marketer ID." });
             }
 
-            userData.referrerID = newReferrerID;  // Assign the ObjectId
+            userData.referrerID = newReferrerID;
         } else {
-            userData.referrerID = null;  // If no referrerID is provided, set it to null
+            userData.referrerID = null;
         }
 
-        userData.course = [];  // Add empty courses for student
+        userData.course = [];
     }
 
     if (userType.toLowerCase() === "marketer") {
         userData.referredStudents = [];
 
-        const generateMarketerId = () => {
-            return Math.floor(100000 + Math.random() * 900000).toString();
-        };
+        const generateMarketerId = () => Math.floor(100000 + Math.random() * 900000).toString();
 
         const isMarketerIdUnique = async (id) => {
             const existingMarketer = await Marketer.findOne({ marketerId: id });
@@ -146,38 +136,38 @@ const signUp = async (req, res, next) => {
         userData.marketerId = await generateUniqueMarketerId();
     }
 
+
+    const mailOptions = {
+        from: process.env.EMAIL,
+        to: newEmail,
+        subject: 'Account Verification OTP - TechX',
+        html: `<h3>Welcome to TechX!</h3>
+               <p>Your OTP for verification is: <strong>${otp}</strong></p>
+               <p>This OTP will expire in 10 minutes.</p>`
+    };
+
     try {
+        // **SEND EMAIL BEFORE SAVING USER**
+        await transporter.sendMail(mailOptions);
+
+        // If email is sent successfully, create user
         const newUser = new UserModel(userData);
         await newUser.save();
 
-        // For updating the Marketer "referredStudents" field
         if (userType.toLowerCase() === "student" && newReferrerID) {
             await Marketer.findByIdAndUpdate(newReferrerID, {
                 $push: { referredStudents: newUser._id }
             });
         }
 
-
-        // Send email with the verification OTP
-        const mailOptions = {
-            from: process.env.EMAIL,
-            to: newEmail,
-            subject: 'Account Verification OTP - TechX',
-            html: `<h3>Welcome to TechX!</h3>
-                   <p>Your OTP for verification is: <strong>${otp}</strong></p>
-                   <p>This OTP will expire in 10 minutes.</p>`
-        };
-
-        transporter.sendMail(mailOptions, (err, info) => {
-            if (err) {
-                console.log('Error sending email: ', err);
-                return res.status(500).json({ message: "Error sending OTP email." });
-            }
-            console.log('OTP email sent: ', info.response);
-            return res.status(201).json({ newUser, message: `Account successfully created as a ${userType}. Welcome to TechX! Kindly check your mail for a token sent for email verification.` });
+        return res.status(201).json({ 
+            newUser, 
+            message: `Account successfully created as a ${userType}. Welcome to TechX! Kindly check your mail for a token sent for email verification.` 
         });
+
     } catch (err) {
-        return res.status(500).json({ message: "ERROR!!! Cannot process data" });
+        console.error('Error sending email:', err);
+        return res.status(500).json({ message: "Error sending OTP email. Account not created." });
     }
 };
 
