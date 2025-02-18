@@ -84,6 +84,10 @@ const getReferredStudentsWithDetails = async (req, res) => {
     try {
         const marketerId = req.params.id;
 
+        if (!mongoose.Types.ObjectId.isValid(marketerId)) {
+            return res.status(400).json({ message: "Invalid marketer ID format." });
+        }
+
         // Find marketer and populate referred students
         const marketer = await Marketer.findById(marketerId).populate({
             path: "referredStudents",
@@ -92,15 +96,21 @@ const getReferredStudentsWithDetails = async (req, res) => {
                 path: "course",
                 select: "title price"
             }
-        });
-
+        })
+        .lean();
 
 
         if (!marketer) {
             return res.status(404).json({ message: "Marketer not found." });
         }
 
-        return res.status(200).json({ marketerinfo: marketer, referredStudents: marketer.referredStudents });
+        return res.status(200).json({ 
+            marketerinfo: marketer,
+            referredStudents: marketer.referredStudents.length > 0 
+                ? marketer.referredStudents 
+                : "No referred students found." 
+        });
+        
     } catch (err) {
         console.error("Error fetching referred students:", err);
         return res.status(500).json({ message: "Server error. Unable to fetch referred students." });

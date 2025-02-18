@@ -353,6 +353,8 @@ const logIn = async (req, res, next) => {
             maxAge: 24 * 60 * 60 * 1000,
         });
 
+        res.setHeader("Authorization", `Bearer ${token}`);
+
         return res.status(200).json({
             message: "Login successful",
             token,
