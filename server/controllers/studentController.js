@@ -69,10 +69,15 @@ const getStudent = async (req, res, next) => {
 //             return res.status(400).json({ message: "Invalid file type. Please upload a valid image." });
 //         }
 
-//         // Find the member
+//         // Find the student
 //         const student = await Student.findById(req.student.id);
 //         if (!student) {
 //             return res.status(404).json({ message: "Student not found." });
+//         }
+
+//         // Check if the student has registered for at least one course
+//         if (!student.course || student.course.length === 0) {
+//             return res.status(403).json({ message: "You must be enrolled in at least one course to change your profile picture." });
 //         }
 
 //         // Delete pre-existing profile image if it exists
@@ -82,7 +87,6 @@ const getStudent = async (req, res, next) => {
 //                 await fs.unlink(oldFilePath);
 //             } catch (err) {
 //                 console.error("Error deleting old image:", err.message);
-//                 // Log the error but continue processing
 //             }
 //         }
 
@@ -97,7 +101,7 @@ const getStudent = async (req, res, next) => {
 //         // Move uploaded file to destination
 //         await image.mv(uploadPath);
 
-//         // Update member record with the new image filename
+//         // Update student record with the new image filename
 //         student.image = newFileName;
 //         await student.save();
 
@@ -106,6 +110,7 @@ const getStudent = async (req, res, next) => {
 //             image: newFileName,
 //         });
 //     } catch (err) {
+//         console.error("Error processing request:", err);
 //         return res.status(500).json({ message: "An error occurred while processing your request." });
 //     }
 // };
@@ -146,8 +151,11 @@ const editStudentDetails = async (req, res, next) => {
 };
 
 
-const verifyPayment = async (studentId, courseId, paymentReference) => {
-    return paymentReference === "VALID_PAYMENT_REF";
+// validate payment status
+const verifyPayment = async (student, paymentReference) => {
+    return student.transactions.some(
+        (transaction) => transaction.reference === paymentReference && transaction.status === "success"
+    );
 };
 
 
@@ -158,103 +166,49 @@ const generateStudentId = () => {
 
 
 // Enroll student after successful payment
-// const enrollInCourse = async (req, res) => {
-//     try {
-//         const { studentId, courseId, paymentReference } = req.body;
-
-//         // Validate input
-//         if (!studentId || !courseId || !paymentReference) {
-//             return res.status(400).json({ message: "Missing required fields" });
-//         }
-
-//         // Check if student exists
-//         const student = await Student.findById(studentId);
-//         if (!student) {
-//             return res.status(404).json({ message: "Student not found" });
-//         }
-
-//         // Check if course exists
-//         const course = await Course.findById(courseId);
-//         if (!course) {
-//             return res.status(404).json({ message: "Course not found" });
-//         }
-
-//         // Check if student is already enrolled
-//         if (student.course.includes(courseId)) {
-//             return res.status(400).json({ message: "Student already enrolled in this course" });
-//         }
-
-//         // Verify payment
-//         const isPaymentValid = await verifyPayment(studentId, courseId, paymentReference);
-//         if (!isPaymentValid) {
-//             return res.status(400).json({ message: "Payment verification failed" });
-//         }
-
-//         // Assign student ID if not already assigned
-//         if (!student.studentId) {
-//             student.studentId = generateStudentId();
-//         }
-
-//         // Enroll student
-//         student.course.push(courseId);
-//         await student.save();
-
-//         // Add student to course's enrollment list
-//         course.studentsEnrolled.push(studentId);
-//         await course.save();
-
-//         return res.status(200).json({
-//             message: "Enrollment successful",
-//             studentId: student.studentId,
-//             enrolledCourses: student.course
-//         });
-//     } catch (error) {
-//         console.error("Error enrolling student:", error);
-//         return res.status(500).json({ message: "Server error" });
-//     }
-// };
-
-
-// Enroll student after successful payment
 const enrollInCourse = async (req, res) => {
-
-    const { id, courseId } = req.body;
-
     try {
+        const { studentId, courseId, paymentReference } = req.body;
 
-        // Validate input
-        if (!id || !courseId) {
+        if (!studentId || !courseId || !paymentReference) {
             return res.status(400).json({ message: "Missing required fields" });
         }
 
-        // Check if student exists
-        const student = await Student.findById(id);
+        if (!mongoose.Types.ObjectId.isValid(studentId) || !mongoose.Types.ObjectId.isValid(courseId)) {
+            return res.status(400).json({ message: "Invalid student or course ID" });
+        }
+
+        const student = await Student.findById(studentId);
         if (!student) {
             return res.status(404).json({ message: "Student not found" });
         }
 
-        // Check if course exists
         const course = await Course.findById(courseId);
         if (!course) {
             return res.status(404).json({ message: "Course not found" });
         }
 
-        // Check if student is already enrolled
-        if (student.course.includes(courseId)) {
+        if (student.paymentStatus === "unpaid") {
+            return res.status(400).json({ message: "Payment not completed for enrollment" });
+        }
+
+        if (student.course.some(id => id.toString() === courseId)) {
             return res.status(400).json({ message: "Student already enrolled in this course" });
         }
 
-        // Assign student ID if not already assigned
+        const isPaymentValid = await verifyPayment(student, paymentReference);
+        if (!isPaymentValid) {
+            return res.status(400).json({ message: "Payment verification failed" });
+        }
+
         if (!student.studentId) {
             student.studentId = generateStudentId();
         }
 
-        // Enroll student
         student.course.push(courseId);
         await student.save();
 
-        // Add student to course's enrollment list
-        course.studentsEnrolled.push(id);
+        course.studentsEnrolled.push(studentId);
         await course.save();
 
         return res.status(200).json({
@@ -262,6 +216,7 @@ const enrollInCourse = async (req, res) => {
             studentId: student.studentId,
             enrolledCourses: student.course
         });
+
     } catch (error) {
         console.error("Error enrolling student:", error);
         return res.status(500).json({ message: "Server error" });

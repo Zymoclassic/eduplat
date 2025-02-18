@@ -345,12 +345,12 @@ const logIn = async (req, res, next) => {
 
         // Generate JWT token
         const { _id: id, firstName, lastName } = existingUser;
-        const token = jwt.sign({ id, firstName, lastName }, process.env.JWT_SECRET, { expiresIn: "1d" });
+        const token = jwt.sign({ id, firstName, lastName, email }, process.env.JWT_SECRET, { expiresIn: "1d" });
 
         // Set auth token in cookies
         res.cookie("authToken", token, {
             httpOnly: true,
-            maxAge: 24 * 60 * 60 * 1000, // 1 day
+            maxAge: 24 * 60 * 60 * 1000,
         });
 
         return res.status(200).json({
@@ -358,6 +358,7 @@ const logIn = async (req, res, next) => {
             token,
             id,
             name: `${firstName} ${lastName}`,
+            email,
         });
     } catch (err) {
         return res.status(500).json({ message: "ERROR!!! Validation interrupted" });
