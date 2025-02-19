@@ -99,7 +99,6 @@ const getReferredStudentsWithDetails = async (req, res) => {
         })
         .lean();
 
-
         if (!marketer) {
             return res.status(404).json({ message: "Marketer not found." });
         }

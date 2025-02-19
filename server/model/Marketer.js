@@ -52,6 +52,14 @@ const marketerSchema = new Schema({
         ref: "Student",
         required: false
     }],
+    commissions: [
+        {
+            student: { type: mongoose.Types.ObjectId, ref: "Student", required: true },
+            amountEarned: { type: Number, required: true },
+            reference: { type: String, required: true },
+            paymentDate: { type: Date, default: Date.now }
+        }
+    ],
     uniquePin: {
         type: String,
         default: null

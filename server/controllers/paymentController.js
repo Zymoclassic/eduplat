@@ -8,7 +8,7 @@ dotenv.config();
 
 
 // Increase marketer balance when referred student registers
-const updateMarketerBalance = async (studentId, amount) => {
+const updateMarketerBalance = async (studentId, amount, reference) => {
     try {
         const student = await Student.findById(studentId);
         if (!student || !student.referrerID) return;
@@ -18,6 +18,15 @@ const updateMarketerBalance = async (studentId, amount) => {
 
         const commission = amount * 0.15; // 15% commission
         marketer.balance += commission;
+
+        // Store commission transaction in marketer's schema
+        marketer.commissions.push({
+            student: studentId,
+            amountEarned: commission,
+            reference,
+            paymentDate: new Date()
+        });
+
         await marketer.save();
 
         console.log(`Marketer ${marketer._id} credited with ₦${commission}`);
@@ -198,7 +207,7 @@ const handleWebhook = async (req, res) => {
             console.log(`Transaction ${reference} recorded for ${user.email}.`);
 
             // Update marketer balance
-            await updateMarketerBalance(user._id, amount);
+            await updateMarketerBalance(user._id, amount, reference);
             console.log(`Marketer balance updated for ${user._id}.`);
 
             return res.status(200).json({ message: "Payment recorded successfully" });
