@@ -2,7 +2,7 @@ const express = require("express");
 const walletRouter = express.Router();
 
 // import functions from authController
-const { viewStudentWallet, setStudentUniquePin, checkStudentUniquePin, viewMarketerWallet, setMarketerUniquePin, checkMarketerUniquePin, requestSPinReset, requestMPinReset, verifySResetToken, verifyMResetToken, setSNewPin, setMNewPin } = require("../controllers/walletController");
+const { viewStudentWallet, setStudentUniquePin, checkStudentUniquePin, viewMarketerWallet, setMarketerUniquePin, checkMarketerUniquePin, changeStudentPin, changeMarketerPin, requestSPinReset, requestMPinReset, verifySResetToken, verifyMResetToken, setSNewPin, setMNewPin } = require("../controllers/walletController");
 const { authMiddleware } = require("../utils/authMiddleware");
 
 // define authentication routes
@@ -10,6 +10,8 @@ walletRouter.get('/s/:id', authMiddleware, checkStudentUniquePin, viewStudentWal
 walletRouter.get('/m/:id', authMiddleware, checkMarketerUniquePin, viewMarketerWallet);
 walletRouter.post("/s/:id/set-pin", authMiddleware, setStudentUniquePin);
 walletRouter.post("/m/:id/set-pin", authMiddleware, setMarketerUniquePin);
+walletRouter.post("/s/:id/change-pin", authMiddleware, checkStudentUniquePin, changeStudentPin);
+walletRouter.post("/m/:id/change-pin", authMiddleware, checkMarketerUniquePin, changeMarketerPin);
 walletRouter.post("/s/:id/request-reset", authMiddleware, checkStudentUniquePin, requestSPinReset);
 walletRouter.post("/m/:id/request-reset", authMiddleware, checkMarketerUniquePin, requestMPinReset);
 walletRouter.post("/s/:id/verify-pin", authMiddleware, checkStudentUniquePin, verifySResetToken);
