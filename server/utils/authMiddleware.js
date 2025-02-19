@@ -2,11 +2,17 @@ const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
 dotenv.config();
 
+
 const authMiddleware = async (req, res, next) => {
-    const auth = req.cookies.authToken;
+    let auth = req.cookies.authToken || req.headers.authorization;
 
     if (!auth) {
-        return res.status(401).json({message: "Not authorized, please log in again."});
+        return res.status(401).json({ message: "Not authorized, please log in again." });
+    }
+
+    // If the token is from the Authorization header, remove 'Bearer ' prefix if present
+    if (auth.startsWith("Bearer ")) {
+        auth = auth.split(" ")[1];
     }
 
     try {
@@ -14,10 +20,10 @@ const authMiddleware = async (req, res, next) => {
         req.user = verifyUser;
         next();
     } catch (err) {
-        if (err.name === 'TokenExpiredError') {
+        if (err.name === "TokenExpiredError") {
             return res.status(401).json({ message: "Token expired." });
         }
-        return res.status(403).json({message: "Unauthorized user."});
+        return res.status(403).json({ message: "Unauthorized user." });
     }
 };
 
