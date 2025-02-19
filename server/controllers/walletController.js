@@ -10,6 +10,11 @@ dotenv.config();
 // Middleware to check if student uniquePin is set
 async function checkStudentUniquePin(req, res, next) {
     try {
+        const { id } = req.params; // Get ID from URL
+        if (id !== req.user.id) {
+            return res.status(403).json({ message: "Unauthorized access." });
+        }
+
         const student = await Student.findById(req.user.id);
         if (!student) {
             return res.status(404).json({ message: "Student not found." });
@@ -30,6 +35,11 @@ async function checkStudentUniquePin(req, res, next) {
 // Middleware to check if marketer uniquePin is set
 async function checkMarketerUniquePin(req, res, next) {
     try {
+        const { id } = req.params; // Get ID from URL
+        if (id !== req.user.id) {
+            return res.status(403).json({ message: "Unauthorized access." });
+        }
+        
         const marketer = await Marketer.findById(req.user.id);
         if (!marketer) {
             return res.status(404).json({ message: "Marketer not found." });

@@ -4,7 +4,7 @@ dotenv.config();
 
 
 const authMiddleware = async (req, res, next) => {
-    let auth = req.cookies.authToken || req.headers.authorization;
+    let auth = req.headers.authorization || req.cookies.authToken;
 
     if (!auth) {
         return res.status(401).json({ message: "Not authorized, please log in again." });
