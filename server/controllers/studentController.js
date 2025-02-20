@@ -151,83 +151,44 @@ const editStudentDetails = async (req, res, next) => {
 };
 
 
-// validate payment status
-const verifyPayment = async (student, paymentReference) => {
-    return student.transactions.some(
-        (transaction) => transaction.reference === paymentReference && transaction.status === "success"
-    );
-};
 
 
-// Generate a unique student ID (can be customized)
-const generateStudentId = () => {
-    return Math.floor(100000 + Math.random() * 900000);
-};
-
-
-// Enroll student after successful payment
-const enrollInCourse = async (req, res) => {
+const enrolledCourse = async (req, res) => {
     try {
-        const { studentId, courseId, paymentReference } = req.body;
+        const userId = req.user.id; // Assuming you have authentication middleware
+        const student = await Student.findById(userId)
+            .populate("payments.courseId", "title description price duration")
+            .select("payments");
 
-        if (!studentId || !courseId || !paymentReference) {
-            return res.status(400).json({ message: "Missing required fields" });
-        }
-
-        if (!mongoose.Types.ObjectId.isValid(studentId) || !mongoose.Types.ObjectId.isValid(courseId)) {
-            return res.status(400).json({ message: "Invalid student or course ID" });
-        }
-
-        const student = await Student.findById(studentId);
         if (!student) {
             return res.status(404).json({ message: "Student not found" });
         }
 
-        const course = await Course.findById(courseId);
-        if (!course) {
-            return res.status(404).json({ message: "Course not found" });
-        }
+        const enrolledCourses = student.payments.map(payment => ({
+            courseId: payment.courseId._id,
+            title: payment.courseId.title,
+            description: payment.courseId.description,
+            price: payment.courseId.price,
+            duration: payment.courseId.duration,
+            amountPaid: payment.amountPaid,
+            amountPayable: payment.amountPayable,
+            paymentStatus: payment.paymentStatus
+        }));
 
-        if (student.paymentStatus === "unpaid") {
-            return res.status(400).json({ message: "Payment not completed for enrollment" });
-        }
-
-        if (student.course.some(id => id.toString() === courseId)) {
-            return res.status(400).json({ message: "Student already enrolled in this course" });
-        }
-
-        const isPaymentValid = await verifyPayment(student, paymentReference);
-        if (!isPaymentValid) {
-            return res.status(400).json({ message: "Payment verification failed" });
-        }
-
-        if (!student.studentId) {
-            student.studentId = generateStudentId();
-        }
-
-        student.course.push(courseId);
-        await student.save();
-
-        course.studentsEnrolled.push(studentId);
-        await course.save();
-
-        return res.status(200).json({
-            message: "Enrollment successful",
-            studentId: student.studentId,
-            enrolledCourses: student.course
-        });
-
+        res.status(200).json({ enrolledCourses });
     } catch (error) {
-        console.error("Error enrolling student:", error);
-        return res.status(500).json({ message: "Server error" });
+        console.error("Error fetching enrolled courses:", error);
+        res.status(500).json({ message: "Server error" });
     }
 };
+
+
 
 
 module.exports = {
     getAllStudents,
     getStudent,
     editStudentDetails,
-    enrollInCourse
-}
+    enrolledCourse
+};
 

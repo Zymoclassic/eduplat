@@ -36,6 +36,11 @@ const updateMarketerBalance = async (studentId, amount, reference) => {
     }
 };
 
+// Generate a unique student ID (can be customized)
+const generateStudentId = () => {
+    return Math.floor(100000 + Math.random() * 900000);
+};
+
 
 const transporter = nodemailer.createTransport({
     service: "gmail",
@@ -280,9 +285,17 @@ const handleWebhook = async (req, res) => {
             const existingTransaction = user.payments.some(payment => 
                 payment.transactions.some(tx => tx.reference === reference)
             );
+
             if (existingTransaction) {
                 console.log(`Transaction ${reference} already recorded.`);
                 return res.status(200).json({ message: "Transaction already recorded" });
+            }
+
+
+            // ✅ Generate a student ID if the user doesn't have one
+            if (!user.studentId) {
+                user.studentId = generateStudentId();
+                console.log(`Generated Student ID for ${user.email}: ${user.studentId}`);
             }
 
             const course = await Course.findById(courseId);
@@ -332,6 +345,12 @@ const handleWebhook = async (req, res) => {
             } else {
                 coursePayment.paymentStatus = "partial";
                 console.log(`Partial payment recorded for ${user.email}, remaining balance: ${coursePayment.amountPayable - coursePayment.amountPaid}`);
+            }
+
+            // ✅ Enroll student in course (push to studentsEnrolled array)
+            if (!course.studentsEnrolled.includes(user._id)) {
+                course.studentsEnrolled.push(user._id);
+                console.log(`Student ${user.email} enrolled in course ${courseId}`);
             }
 
             // ✅ Credit ₦20,000 **ONLY on first payment AND if the student has a referrer**
