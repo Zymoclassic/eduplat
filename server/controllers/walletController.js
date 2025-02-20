@@ -503,7 +503,7 @@ const setMNewPin = async (req, res) => {
 const saveMBankDetails = async (req, res) => {
     try {
         const { accountName, accountNumber, bankName } = req.body;
-        const studentId = req.user.id;
+        const marketerId = req.user.id;
 
         // Validate fields
         if (!accountName || !accountNumber || !bankName) {
@@ -521,16 +521,16 @@ const saveMBankDetails = async (req, res) => {
         }
 
         // Find the student
-        const student = await Student.findById(studentId);
-        if (!student) {
-            return res.status(404).json({ message: "Student not found." });
+        const marketer = await Marketer.findById(marketerId);
+        if (!marketer) {
+            return res.status(404).json({ message: "Marketer not found." });
         }
 
         // Update bank details
-        student.bankDetails = { accountName, accountNumber, bankName };
-        await student.save();
+        marketer.bankDetails = { accountName, accountNumber, bankName };
+        await marketer.save();
 
-        res.status(200).json({ message: "Bank details saved successfully.", bankDetails: student.bankDetails });
+        res.status(200).json({ message: "Bank details saved successfully.", bankDetails: marketer.bankDetails });
 
     } catch (error) {
         console.error(error);

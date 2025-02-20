@@ -78,12 +78,6 @@ const marketerSchema = new Schema({
             type: String,
             trim: true,
             default: null,
-            validate: {
-                validator: function (v) {
-                    return /^\d{10}$/.test(v); // Validates Nigerian 10-digit bank account numbers
-                },
-                message: "Account number must be 10 digits.",
-            },
         },
         bankName: {
             type: String,
