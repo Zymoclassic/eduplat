@@ -37,16 +37,17 @@ const updateMarketerBalance = async (studentId, amount, reference) => {
 };
 
 
+const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+        user: process.env.EMAIL,
+        pass: process.env.PASSWORD,
+    },
+});
+
+
 const sendPaymentEmail = async (email, amount, reference, paymentStatus) => {
     try {
-        const transporter = nodemailer.createTransport({
-            service: "gmail",
-            auth: {
-                user: process.env.EMAIL,
-                pass: process.env.PASSWORD,
-            },
-        });
-
         const mailOptions = {
             from: process.env.EMAIL,
             to: email,
@@ -71,20 +72,18 @@ const sendPaymentEmail = async (email, amount, reference, paymentStatus) => {
 
 const sendReferrerNotification = async (referrerEmail, studentName, amount) => {
     try {
-        const message = `
-            <p>Hello,</p>
-            <p>Your referred student <strong>${studentName}</strong> has just made a payment of ₦${amount.toLocaleString()}.</p>
-            <p>Thank you for your referral!</p>
-        `;
-
-        await sendEmail({
-            from: process.env.EMAIL,
-            to: referrerEmail,
-            subject: "Your Referral Just Made a Payment!",
-            html: message
-        });
-
-        console.log(`Notification sent to referrer: ${referrerEmail}`);
+            const mailOptions = {
+                from: process.env.EMAIL,
+                to: referrerEmail,
+                subject: "Your Referral Just Made a Payment!",
+                html: `
+                    <p>Hello,</p>
+                    <p>Your referred student <strong>${studentName}</strong> has just made a payment of ₦${amount.toLocaleString()}.</p>
+                    <p>Thank you for your referral!</p>`;
+            };
+    
+            await transporter.sendMail(mailOptions);
+            console.log(`Notification sent to referrer: ${referrerEmail}`);
     } catch (error) {
         console.error("Error sending referrer notification:", error);
     }
@@ -189,7 +188,7 @@ const completePayment = async (req, res) => {
             paystackURL,
             {
                 email,
-                amount: balance * 100,
+                amount: balance * 100, // Convert to kobo
                 metadata: { courseId },
             },
             {
@@ -295,41 +294,44 @@ const handleWebhook = async (req, res) => {
             const coursePrice = course.price;
             let coursePayment = user.payments.find(p => p.courseId.equals(courseId));
 
+            // ✅ Determine the payment type (full/partial)
+            let paymentMade;
+            if (amount >= coursePrice) {
+                paymentMade = "completed";
+            } else if (amount === coursePrice * 0.6) {
+                paymentMade = "partial";
+            }
+
+            // ✅ If no existing payment record, create a new one
             if (!coursePayment) {
                 coursePayment = {
                     courseId: course._id,
-                    amountPaid: 0,
+                    amountPaid: amount,
                     amountPayable: coursePrice,
-                    paymentStatus: "unpaid",
-                    transactions: []
+                    paymentStatus: paymentMade,
+                    transactions: [{ reference, amount, status, transactionDate: new Date() }]
                 };
                 user.payments.push(coursePayment);
+            } else {
+                // ✅ Ensure amount does not exceed required balance
+                const remainingBalance = coursePayment.amountPayable - coursePayment.amountPaid;
+                if (amount > remainingBalance) {
+                    console.log(`Overpayment detected: Paid ${amount}, but only ${remainingBalance} needed.`);
+                    return res.status(400).json({ message: "Payment exceeds required amount" });
+                }
+
+                // ✅ Record transaction
+                coursePayment.transactions.push({ reference, amount, status, transactionDate: new Date() });
+                coursePayment.amountPaid += amount;
             }
 
-            // ✅ Ensure amount does not exceed required balance for this course
-            const remainingBalance = coursePayment.amountPayable - coursePayment.amountPaid;
-            if (amount > remainingBalance) {
-                console.log(`Overpayment detected: Paid ${amount}, but only ${remainingBalance} needed.`);
-                return res.status(400).json({ message: "Payment exceeds required amount" });
-            }
-
-            // ✅ Record transaction
-            coursePayment.transactions.push({ reference, amount, status, transactionDate: new Date() });
-            coursePayment.amountPaid += amount;
-
-            // ✅ Check if this is the **final payment**
+            // ✅ Check if payment is complete
             if (coursePayment.amountPaid >= coursePayment.amountPayable) {
                 coursePayment.paymentStatus = "completed";
                 console.log(`Payment completed for ${user.email} on course ${courseId}`);
             } else {
                 coursePayment.paymentStatus = "partial";
                 console.log(`Partial payment recorded for ${user.email}, remaining balance: ${coursePayment.amountPayable - coursePayment.amountPaid}`);
-            }
-
-            // ✅ If this is a **second payment (or more)**, check and mark as "completed"
-            if (coursePayment.paymentStatus === "partial" && remainingBalance - amount === 0) {
-                coursePayment.paymentStatus = "completed";
-                console.log(`Final balance paid for ${user.email}, course ${courseId}`);
             }
 
             // ✅ Credit ₦20,000 **ONLY on first payment AND if the student has a referrer**
