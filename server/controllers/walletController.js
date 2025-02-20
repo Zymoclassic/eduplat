@@ -2,6 +2,7 @@ const Student = require("../model/Student");
 const Marketer = require("../model/Marketer");
 const mongoose = require("mongoose");
 const nodemailer = require('nodemailer');
+const banksData = require("../utils/bank.json");
 const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
 dotenv.config();
@@ -17,6 +18,12 @@ const transporter = nodemailer.createTransport({
         pass: process.env.PASSWORD
     }
 });
+
+
+// Get List of Banks
+const getBankList = (req, res) => {
+    res.status(200).json({ banks: banksData.banks });
+};
 
 
 
@@ -235,6 +242,44 @@ const setSNewPin = async (req, res) => {
     }
 };
 
+
+const saveSBankDetails = async (req, res) => {
+    try {
+        const { accountName, accountNumber, bankName } = req.body;
+        const studentId = req.user.id;
+
+        // Validate fields
+        if (!accountName || !accountNumber || !bankName) {
+            return res.status(400).json({ message: "All fields are required." });
+        }
+
+        if (!/^\d{10}$/.test(accountNumber)) {
+            return res.status(400).json({ message: "Account number must be 10 digits." });
+        }
+
+        // Validate bank name from JSON file
+        const validBanks = banksData.banks;
+        if (!validBanks.includes(bankName)) {
+            return res.status(400).json({ message: "Invalid bank name. Please select from the provided options." });
+        }
+
+        // Find the student
+        const student = await Student.findById(studentId);
+        if (!student) {
+            return res.status(404).json({ message: "Student not found." });
+        }
+
+        // Update bank details
+        student.bankDetails = { accountName, accountNumber, bankName };
+        await student.save();
+
+        res.status(200).json({ message: "Bank details saved successfully.", bankDetails: student.bankDetails });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Server error", error });
+    }
+};
 
 
 
@@ -455,6 +500,44 @@ const setMNewPin = async (req, res) => {
 };
 
 
+const saveMBankDetails = async (req, res) => {
+    try {
+        const { accountName, accountNumber, bankName } = req.body;
+        const studentId = req.user.id;
+
+        // Validate fields
+        if (!accountName || !accountNumber || !bankName) {
+            return res.status(400).json({ message: "All fields are required." });
+        }
+
+        if (!/^\d{10}$/.test(accountNumber)) {
+            return res.status(400).json({ message: "Account number must be 10 digits." });
+        }
+
+        // Validate bank name from JSON file
+        const validBanks = banksData.banks;
+        if (!validBanks.includes(bankName)) {
+            return res.status(400).json({ message: "Invalid bank name. Please select from the provided options." });
+        }
+
+        // Find the student
+        const student = await Student.findById(studentId);
+        if (!student) {
+            return res.status(404).json({ message: "Student not found." });
+        }
+
+        // Update bank details
+        student.bankDetails = { accountName, accountNumber, bankName };
+        await student.save();
+
+        res.status(200).json({ message: "Bank details saved successfully.", bankDetails: student.bankDetails });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Server error", error });
+    }
+};
+
 
 module.exports = {
     viewStudentWallet,
@@ -470,6 +553,9 @@ module.exports = {
     verifySResetToken,
     verifyMResetToken,
     setSNewPin,
-    setMNewPin
+    setMNewPin,
+    getBankList,
+    saveSBankDetails,
+    saveMBankDetails
 };
 
