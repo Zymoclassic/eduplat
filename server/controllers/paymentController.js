@@ -3,6 +3,7 @@ const Marketer = require("../model/Marketer");
 const Course = require("../model/Course");
 const axios = require('axios');
 const crypto = require('crypto');
+const nodemailer = require("nodemailer");
 const dotenv = require("dotenv");
 dotenv.config();
 
@@ -36,14 +37,71 @@ const updateMarketerBalance = async (studentId, amount, reference) => {
 };
 
 
+const sendPaymentEmail = async (email, amount, reference, paymentStatus) => {
+    try {
+        const transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+                user: process.env.EMAIL,
+                pass: process.env.PASSWORD,
+            },
+        });
+
+        const mailOptions = {
+            from: process.env.EMAIL,
+            to: email,
+            subject: "Payment Confirmation - Your Transaction was Successful",
+            html: `
+                <h2>Payment Confirmation</h2>
+                <p>Dear ${email},</p>
+                <p>We have received your payment of <strong>₦${amount}</strong> with reference <strong>${reference}</strong>.</p>
+                <p>Your current payment status is: <strong>${paymentStatus.toUpperCase()}</strong>.</p>
+                <p>Thank you for your payment!</p>
+                <p>Best regards,<br>Pageinnovations</p>
+            `,
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log(`Payment email sent to ${email}`);
+    } catch (error) {
+        console.error("Error sending email:", error);
+    }
+};
+
+
+const sendReferrerNotification = async (referrerEmail, studentName, amount) => {
+    try {
+        const message = `
+            <p>Hello,</p>
+            <p>Your referred student <strong>${studentName}</strong> has just made a payment of ₦${amount.toLocaleString()}.</p>
+            <p>Thank you for your referral!</p>
+        `;
+
+        await sendEmail({
+            from: process.env.EMAIL,
+            to: referrerEmail,
+            subject: "Your Referral Just Made a Payment!",
+            html: message
+        });
+
+        console.log(`Notification sent to referrer: ${referrerEmail}`);
+    } catch (error) {
+        console.error("Error sending referrer notification:", error);
+    }
+};
+
+
 // Initialize Payment
 const initializePayment = async (req, res, next) => {
+
+    const email = req.user.email;
+
     try {
-        const { email, courseId, paymentStructure, learningMode } = req.body;
+        const { courseId, paymentStructure, learningMode } = req.body;
 
         // Validate request data
         if (!email || !courseId || !paymentStructure || !learningMode) {
-            return res.status(400).json({ message: "Email, courseId, and paymentStructure are required!" });
+            return res.status(400).json({ message: "Course, Email, and Payment structure are required!" });
         }
 
         // Fetch course from the database
@@ -55,10 +113,10 @@ const initializePayment = async (req, res, next) => {
         let amount;
         if (paymentStructure === "full") {
             amount = course.price;
-        } else if (paymentStructure === "half") {
+        } else if (paymentStructure === "part") {
             amount = course.price * 0.6;
         } else {
-            return res.status(400).json({ message: "Invalid payment structure! Choose 'full' or 'half'." });
+            return res.status(400).json({ message: "Invalid payment structure! Choose 'full' or 'part'." });
         }
 
         console.log("Initializing payment with email:", email, "Amount:", amount);
@@ -87,6 +145,71 @@ const initializePayment = async (req, res, next) => {
     } catch (error) {
         console.error("Error initializing payment:", error);
         res.status(500).json({ message: "Payment initialization failed", error: error.response?.data || error.message });
+    }
+};
+
+
+// Route for users to complete payment manually
+const completePayment = async (req, res) => {
+
+    const email = req.user.email;
+
+    try {
+        const { courseId } = req.body;
+
+        if (!email || !courseId ) {
+            return res.status(400).json({ message: "Email and course are required!" });
+        }
+
+        // Find the student
+        const student = await Student.findOne({ email });
+        if (!student) {
+            return res.status(404).json({ message: "Student not found!" });
+        }
+
+        // Find the payment record for the course
+        const paymentRecord = student.payments.find(payment => 
+            payment.courseId.toString() === courseId
+        );
+
+        if (!paymentRecord) {
+            return res.status(404).json({ message: "Payment record not found!" });
+        }
+
+        // Calculate remaining balance
+        const balance = paymentRecord.amountPayable - paymentRecord.amountPaid;
+
+        if (balance <= 0) {
+            return res.status(400).json({ message: "No remaining balance. Payment already completed!" });
+        }
+
+        // Send payment request to Paystack
+        const paystackURL = "https://api.paystack.co/transaction/initialize";
+        const response = await axios.post(
+            paystackURL,
+            {
+                email,
+                amount: balance * 100,
+                metadata: { courseId },
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+                    "Content-Type": "application/json",
+                },
+            }
+        );
+
+        res.status(200).json({
+            message: "Payment initiated successfully!",
+            paystackData: response.data,
+            authorizationUrl: response.data.data.authorization_url,
+        });
+
+
+    } catch (error) {
+        console.error("Error updating payment:", error);
+        res.status(500).json({ message: "Payment update failed", error: error.message });
     }
 };
 
@@ -124,7 +247,9 @@ const handleWebhook = async (req, res) => {
     try {
         const secret = process.env.PAYSTACK_SECRET_KEY;
         const paystackSignature = req.headers["x-paystack-signature"];
-        const hash = crypto.createHmac("sha512", secret).update(JSON.stringify(req.body)).digest("hex");
+        const hash = crypto.createHmac("sha512", secret)
+            .update(JSON.stringify(req.body))
+            .digest("hex");
 
         if (hash !== paystackSignature) {
             return res.status(401).json({ message: "Unauthorized request" });
@@ -139,31 +264,28 @@ const handleWebhook = async (req, res) => {
             const amount = req.body.data.amount / 100; // Convert from kobo to naira
             const reference = req.body.data.reference;
             const status = req.body.data.status;
-            const metadata = req.body.data.metadata || {}; // Extract metadata
-            const { courseId, learningMode, paymentStructure } = metadata;
+            const metadata = req.body.data.metadata || {};
+            const { courseId } = metadata;
 
-            // Ensure courseId is provided
             if (!courseId) {
                 console.log("Course ID not provided in payment metadata.");
                 return res.status(400).json({ message: "Course ID is required" });
             }
 
-            // Find the student by email
             const user = await Student.findOne({ email });
-
             if (!user) {
                 console.log(`Student with email ${email} not found.`);
                 return res.status(404).json({ message: "Student not found" });
             }
 
-            // Check if transaction already exists
-            const existingTransaction = user.transactions.find(tx => tx.reference === reference);
+            const existingTransaction = user.payments.some(payment => 
+                payment.transactions.some(tx => tx.reference === reference)
+            );
             if (existingTransaction) {
                 console.log(`Transaction ${reference} already recorded.`);
                 return res.status(200).json({ message: "Transaction already recorded" });
             }
 
-            // Get the course price
             const course = await Course.findById(courseId);
             if (!course) {
                 console.log(`Course with ID ${courseId} not found.`);
@@ -171,51 +293,81 @@ const handleWebhook = async (req, res) => {
             }
 
             const coursePrice = course.price;
+            let coursePayment = user.payments.find(p => p.courseId.equals(courseId));
 
-            // Validate payment amount
-            if (amount !== coursePrice && amount !== coursePrice * 0.6) {
-                console.log(`Invalid payment amount: ${amount}. Expected ${coursePrice} or ${coursePrice * 0.6}.`);
-                return res.status(400).json({ message: "Invalid payment amount" });
+            if (!coursePayment) {
+                coursePayment = {
+                    courseId: course._id,
+                    amountPaid: 0,
+                    amountPayable: coursePrice,
+                    paymentStatus: "unpaid",
+                    transactions: []
+                };
+                user.payments.push(coursePayment);
             }
 
-            // Add new transaction
-            const newTransaction = {
-                reference,
-                amount,
-                status,
-                transactionDate: new Date()
-            };
+            // ✅ Ensure amount does not exceed required balance for this course
+            const remainingBalance = coursePayment.amountPayable - coursePayment.amountPaid;
+            if (amount > remainingBalance) {
+                console.log(`Overpayment detected: Paid ${amount}, but only ${remainingBalance} needed.`);
+                return res.status(400).json({ message: "Payment exceeds required amount" });
+            }
 
-            user.transactions.push(newTransaction);
-            user.amountPaid += amount;
+            // ✅ Record transaction
+            coursePayment.transactions.push({ reference, amount, status, transactionDate: new Date() });
+            coursePayment.amountPaid += amount;
 
-            // Update payment status
-            if (user.amountPaid >= coursePrice) {
-                user.paymentStatus = "completed";
+            // ✅ Check if this is the **final payment**
+            if (coursePayment.amountPaid >= coursePayment.amountPayable) {
+                coursePayment.paymentStatus = "completed";
+                console.log(`Payment completed for ${user.email} on course ${courseId}`);
             } else {
-                user.paymentStatus = "partial";
+                coursePayment.paymentStatus = "partial";
+                console.log(`Partial payment recorded for ${user.email}, remaining balance: ${coursePayment.amountPayable - coursePayment.amountPaid}`);
             }
 
-            // Add ₦20,000 to student balance for any payment
-            user.balance += 20000;
-            console.log(`Student ${user.email} credited with ₦20,000.`);
+            // ✅ If this is a **second payment (or more)**, check and mark as "completed"
+            if (coursePayment.paymentStatus === "partial" && remainingBalance - amount === 0) {
+                coursePayment.paymentStatus = "completed";
+                console.log(`Final balance paid for ${user.email}, course ${courseId}`);
+            }
 
-            user.learningMode = learningMode;
-            user.paymentStructure = paymentStructure;
+            // ✅ Credit ₦20,000 **ONLY on first payment AND if the student has a referrer**
+            if (user.payments.length === 1 && user.referrerID) {
+                user.balance += 20000;
+                console.log(`Student ${user.email} credited with ₦20,000 on first payment (Referrer: ${user.referrerID}).`);
+
+                const referrer = await Marketer.findById(user.referrerID);
+                if (referrer) {
+                    await sendReferrerNotification(referrer.email, user.firstName, amount);
+                    console.log(`Referrer ${referrer.email} notified about ${user.email}'s payment.`);
+                }
+
+                if (!user.earnings.some(earning => earning.reference === reference)) {
+                    user.earnings.push({
+                        amountEarned: 20000,
+                        reference,
+                        paymentDate: new Date()
+                    });
+                    console.log(`Earnings recorded for ${user.email}: ₦20,000.`);
+                }
+            }
 
             await user.save();
             console.log(`Transaction ${reference} recorded for ${user.email}.`);
 
-            // Update marketer balance
+            // ✅ Update marketer balance
             await updateMarketerBalance(user._id, amount, reference);
             console.log(`Marketer balance updated for ${user._id}.`);
+
+            // ✅ Send payment confirmation email
+            await sendPaymentEmail(user.email, amount, reference, coursePayment.paymentStatus);
 
             return res.status(200).json({ message: "Payment recorded successfully" });
         }
 
         console.log("Unhandled event:", req.body.event);
         return res.status(200).json({ message: "Webhook received" });
-
     } catch (error) {
         console.error("Error processing webhook:", error);
         return res.status(500).json({ message: "Internal server error" });
@@ -223,5 +375,5 @@ const handleWebhook = async (req, res) => {
 };
 
 
-module.exports = { initializePayment, verifyPayment, handleWebhook };
+module.exports = { initializePayment, completePayment, verifyPayment, handleWebhook };
 

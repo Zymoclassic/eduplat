@@ -17,7 +17,7 @@ const marketerSchema = new Schema({
         unique: true
     },
     emailVerified: { 
-        type: Boolean, 
+        type: Boolean,
         default: false 
     },
     otp: { 
@@ -57,6 +57,12 @@ const marketerSchema = new Schema({
             student: { type: mongoose.Types.ObjectId, ref: "Student", required: true },
             amountEarned: { type: Number, required: true },
             reference: { type: String, required: true },
+            paymentDate: { type: Date, default: Date.now }
+        }
+    ],
+    withdrawals: [
+        {
+            amount: { type: Number, required: true },
             paymentDate: { type: Date, default: Date.now }
         }
     ],

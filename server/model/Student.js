@@ -57,47 +57,45 @@ const studentSchema = new Schema({
         required: false,
         default: null
     },
-    paymentStructure: {
-        type: String,
-        enum: ["full", "half"]
-    },
-    learningMode: {
-        type: String,
-        enum: ["onsite", "virtual"]
-    },
-    paymentStatus: {
-        type: String,
-        default: "unpaid",
-        enum: ["completed", "partial", "unpaid"]
-    },
     balance: {
         type: Number,
         default: 0
     },
-    amountPayable: {
-        type: Number,
-        default: 0
-    },
-    amountPaid: {
-        type: Number,
-        default: 0
-    },
-    transactions: [
+    payments: [
         {
-            reference: {type: String, required: true},
-            amount: {type: Number, required: true},
-            status: {type: String, enum: ["pending", "success", "failed"], default: "pending"},
-            transactionDate: {type: Date, default: Date.now}
+            courseId: { type: mongoose.Schema.Types.ObjectId, ref: "Course" },
+            amountPaid: { type: Number, default: 0 },
+            amountPayable: { type: Number, default: 0, required: true },
+            paymentStatus: { type: String, enum: ["unpaid", "partial", "completed"], default: "unpaid" },
+            paymentStructure: { type: String, enum: ["full", "part"] },
+            learningMode: { type: String, enum: ["onsite", "virtual"] },
+            transactions: [
+                {
+                    reference: String,
+                    amount: Number,
+                    status: String,
+                    transactionDate: Date
+                }
+            ],
+        },
+    ],
+    earnings: [
+        {
+            amountEarned: { type: Number, required: true },
+            reference: { type: String, required: true },
+            paymentDate: { type: Date, default: Date.now }
+        }
+    ],
+    withdrawals: [
+        {
+            amount: { type: Number, required: true },
+            paymentDate: { type: Date, default: Date.now }
         }
     ],
     uniquePin: {
         type: String,
         default: null
     },
-    course: [{
-        type: mongoose.Types.ObjectId,
-        ref: "Course"
-    }],
     bankDetails: {
         accountName: {
             type: String,
