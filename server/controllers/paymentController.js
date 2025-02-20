@@ -94,8 +94,10 @@ const sendReferrerNotification = async (referrerEmail, studentName, amount) => {
 // Initialize Payment
 const initializePayment = async (req, res, next) => {
 
+    const email = req.user.email;
+
     try {
-        const { email, courseId, paymentStructure, learningMode } = req.body;
+        const { courseId, paymentStructure, learningMode } = req.body;
 
         // Validate request data
         if (!email || !courseId || !paymentStructure || !learningMode) {
@@ -150,8 +152,10 @@ const initializePayment = async (req, res, next) => {
 // Route for users to complete payment manually
 const completePayment = async (req, res) => {
 
+    const email = req.user.email;
+
     try {
-        const { email, courseId } = req.body;
+        const { courseId } = req.body;
 
         if (!email || !courseId ) {
             return res.status(400).json({ message: "Email and course are required!" });
