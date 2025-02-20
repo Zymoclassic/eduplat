@@ -79,7 +79,7 @@ const sendReferrerNotification = async (referrerEmail, studentName, amount) => {
                 html: `
                     <p>Hello,</p>
                     <p>Your referred student <strong>${studentName}</strong> has just made a payment of ₦${amount.toLocaleString()}.</p>
-                    <p>Thank you for your referral!</p>`;
+                    <p>Thank you for your referral!</p>`
             };
     
             await transporter.sendMail(mailOptions);
