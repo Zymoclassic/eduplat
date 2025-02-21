@@ -61,6 +61,18 @@ const studentSchema = new Schema({
         type: Number,
         default: 0
     },
+    withdrawalHistory: [
+        {
+            withdrawalId: { type: mongoose.Schema.Types.ObjectId, ref: "Withdrawal" },
+            amount: { type: Number, required: true },
+            status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
+            processedAt: { type: Date, default: Date.now }
+        }
+    ],
+    totalWithdrawn: {
+        type: Number,
+        default: 0
+    },
     payments: [
         {
             courseId: { type: mongoose.Schema.Types.ObjectId, ref: "Course" },
@@ -83,12 +95,6 @@ const studentSchema = new Schema({
         {
             amountEarned: { type: Number, required: true },
             reference: { type: String, required: true },
-            paymentDate: { type: Date, default: Date.now }
-        }
-    ],
-    withdrawals: [
-        {
-            amount: { type: Number, required: true },
             paymentDate: { type: Date, default: Date.now }
         }
     ],

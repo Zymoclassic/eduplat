@@ -74,6 +74,18 @@ const marketerSchema = new Schema({
         type: Number,
         default: 0
     },
+    withdrawalHistory: [
+        {
+            withdrawalId: { type: mongoose.Schema.Types.ObjectId, ref: "Withdrawal" },
+            amount: { type: Number, required: true },
+            status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
+            processedAt: { type: Date, default: Date.now }
+        }
+    ],
+    totalWithdrawn: {
+        type: Number,
+        default: 0
+    },
     bankDetails: {
         accountName: {
             type: String,

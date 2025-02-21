@@ -9,6 +9,7 @@ const MarketerRouter = require("./routes/MarketerRoutes");
 const CourseRouter = require("./routes/CourseRoutes");
 const PaymentRouter = require("./routes/PaymentRoutes");
 const WalletRouter = require("./routes/WalletRoutes");
+const WithdrawalRouter = require("./routes/WithdrawalRoutes");
 const { notFound, errorHandler } = require("./utils/errorMiddleware");
 const { authMiddleware } = require("./utils/authMiddleware");
 dotenv.config();
@@ -33,9 +34,10 @@ app.use("/marketer", MarketerRouter);
 app.use("/course", CourseRouter);
 app.use("/pay", PaymentRouter);
 app.use("/wallet", WalletRouter);
+app.use("/withdraw", WithdrawalRouter);
+
 app.use(notFound);
 app.use(errorHandler);
-
 
 
 
