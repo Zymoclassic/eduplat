@@ -151,8 +151,7 @@ const editStudentDetails = async (req, res, next) => {
 };
 
 
-
-
+// check for enrolled courses
 const enrolledCourse = async (req, res) => {
     try {
         const userId = req.user.id; // Assuming you have authentication middleware
