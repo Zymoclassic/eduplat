@@ -88,12 +88,13 @@ const getReferredStudentsWithDetails = async (req, res) => {
             return res.status(400).json({ message: "Invalid marketer ID format." });
         }
 
-        // Find marketer and populate referred students
+        // Find marketer and populate referred students, including their payments and courses
         const marketer = await Marketer.findById(marketerId).populate({
             path: "referredStudents",
-            select: "firstName lastName email phoneNumber location balance course userType createdAt",
+            select: "firstName lastName email phoneNumber location balance userType createdAt payments",
             populate: {
-                path: "course",
+                path: "payments.courseId",
+                model: "Course",
                 select: "title price"
             }
         })
