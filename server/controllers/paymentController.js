@@ -393,7 +393,7 @@ const handleWebhook = async (req, res) => {
                 userModel: "Student",
                 title: "Payment Successful",
                 message: `Your payment of ₦${amount} for ${course.title} was successful.`,
-                type: "Payment",
+                type: "message",
             });
 
             // ✅ Notify the Student
@@ -410,14 +410,12 @@ const handleWebhook = async (req, res) => {
                         user: user.referrerID,
                         userModel: "Marketer",
                         title: "Commission received",
-                        message: `A student you referred just made a payment, You have a commission.`,
-                        type: "Payment",
+                        message: referrerMessage,
+                        type: "message",
                     });
                     // Send in-app notification
                     sendRealTimeNotification(referrer._id, referrerMessage);
 
-                    // Send email notification
-                    await sendReferrerNotification(referrer.email, user.firstName, amount);
 
                     await notification.save();
 
