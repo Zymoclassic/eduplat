@@ -11,9 +11,6 @@ withdrawalRouter.get('/dashboard/withdrawal-history', getAllWithdrawals);
 withdrawalRouter.post('/', authMiddleware, requestWithdrawal);
 withdrawalRouter.post('/verify-token', authMiddleware, verifyWithdrawal);
 withdrawalRouter.get('/:id/withdrawal-history',authMiddleware, getUserWithdrawals);
-// withdrawalRouter.post('/m', authMiddleware, requestMWithdrawal);
-// withdrawalRouter.post('/m/verify-token', authMiddleware, verifyMWithdrawal);
-// withdrawalRouter.get('/m/:id/withdrawal-history',authMiddleware, getMarketerWithdrawals);
 
 
 module.exports = withdrawalRouter;

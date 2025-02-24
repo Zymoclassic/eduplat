@@ -1,6 +1,8 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const http = require("http");
+const socketIo = require("socket.io");
 const cookieParser = require("cookie-parser");
 const dotenv = require('dotenv');
 const AuthRouter = require("./routes/AuthRoutes");
@@ -10,6 +12,7 @@ const CourseRouter = require("./routes/CourseRoutes");
 const PaymentRouter = require("./routes/PaymentRoutes");
 const WalletRouter = require("./routes/WalletRoutes");
 const WithdrawalRouter = require("./routes/WithdrawalRoutes");
+const NotificationRouter = require("./routes/NotificationRoutes");
 const { notFound, errorHandler } = require("./utils/errorMiddleware");
 const { authMiddleware } = require("./utils/authMiddleware");
 dotenv.config();
@@ -35,6 +38,7 @@ app.use("/course", CourseRouter);
 app.use("/pay", PaymentRouter);
 app.use("/wallet", WalletRouter);
 app.use("/withdraw", WithdrawalRouter);
+app.use("/notification", NotificationRouter);
 
 app.use(notFound);
 app.use(errorHandler);
