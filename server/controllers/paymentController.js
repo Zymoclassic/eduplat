@@ -5,6 +5,9 @@ const axios = require('axios');
 const crypto = require('crypto');
 const nodemailer = require("nodemailer");
 const dotenv = require("dotenv");
+const { sendRealTimeNotification } = require("../utils/notificationMiddleware.js");
+const Notification = require("../model/Notification");
+  
 dotenv.config();
 
 
@@ -383,6 +386,49 @@ const handleWebhook = async (req, res) => {
 
             // ✅ Send payment confirmation email
             await sendPaymentEmail(user.email, amount, reference, coursePayment.paymentStatus);
+
+            // ✅ **Send In-App Notification**
+            const notification = new Notification({
+                user: user._id,
+                userModel: "Student",
+                title: "Payment Successful",
+                message: `Your payment of ₦${amount} for ${course.title} was successful.`,
+                type: "Payment",
+            });
+
+            // ✅ Notify the Student
+            sendRealTimeNotification(user._id, `Payment of ₦${amount} received for ${course.title}.`);
+
+            // ✅ Notify the Marketer (Referrer)
+            if (user.referrerID) {
+                const referrer = await Marketer.findById(user.referrerID);
+
+                if (referrer) {
+                    const referrerMessage = `${user.firstName} just made a payment of ₦${amount} for ${course.title}. You have received a commission.`;
+                    
+                    const notification = new Notification({
+                        user: user.referrerID,
+                        userModel: "Marketer",
+                        title: "Commission received",
+                        message: `A student you referred just made a payment, You have a commission.`,
+                        type: "Commission",
+                    });
+                    // Send in-app notification
+                    sendRealTimeNotification(referrer._id, referrerMessage);
+
+                    // Send email notification
+                    await sendReferrerNotification(referrer.email, "Referral Payment Alert", referrerMessage);
+
+                    await notification.save();
+
+                    console.log(`Referrer ${referrer.email} notified about ${user.email}'s payment.`);
+                }
+            }
+
+            await notification.save();
+
+            // ✅ **Send Real-Time Notification**
+            sendRealTimeNotification(user._id, notification);
 
             return res.status(200).json({ message: "Payment recorded successfully" });
         }

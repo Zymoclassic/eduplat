@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "305574953638",
+    "project_id": "techx-pg",
+    "storage_bucket": "techx-pg.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:305574953638:android:d3676d415d6125344f2a67",
+        "android_client_info": {
+          "package_name": "com.pageinnovations.techx"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCuySJELThVMIcQm3oM-i9lAHNOt93320g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

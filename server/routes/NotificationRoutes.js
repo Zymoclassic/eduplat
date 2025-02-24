@@ -5,9 +5,9 @@ const notificationRouter = express.Router();
 const {  sendNotification, getUserNotifications, markAsRead } = require("../controllers/notificationController");
 
 // define the routes
-notificationRouter.post('/notify', sendNotification);
-notificationRouter.get('/check', getUserNotifications);
-notificationRouter.put('/read', markAsRead);
+notificationRouter.post('/', sendNotification);
+notificationRouter.get('/:userId', getUserNotifications);
+notificationRouter.put('/:userId/read', markAsRead);
 
 
 module.exports = notificationRouter;
