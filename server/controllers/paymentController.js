@@ -86,7 +86,7 @@ const sendReferrerNotification = async (referrerEmail, studentName, amount) => {
                 subject: "Your Referral Just Made a Payment!",
                 html: `
                     <p>Hello,</p>
-                    <p>Your referred student <strong>${studentName}</strong> has just made a payment of ₦${amount.toLocaleString()}.</p>
+                    <p>Your referred student <strong>${studentName}</strong> has just made a payment of ₦${amount.toLocaleString()}. You received a commission.</p>
                     <p>Thank you for your referral!</p>`
             };
     
@@ -411,13 +411,13 @@ const handleWebhook = async (req, res) => {
                         userModel: "Marketer",
                         title: "Commission received",
                         message: `A student you referred just made a payment, You have a commission.`,
-                        type: "Commission",
+                        type: "Payment",
                     });
                     // Send in-app notification
                     sendRealTimeNotification(referrer._id, referrerMessage);
 
                     // Send email notification
-                    await sendReferrerNotification(referrer.email, "Referral Payment Alert", referrerMessage);
+                    await sendReferrerNotification(referrer.email, user.firstName, amount);
 
                     await notification.save();
 
