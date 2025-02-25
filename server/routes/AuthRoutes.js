@@ -7,7 +7,7 @@ const {  signUp, verifyOtp, resendOtp, logIn, forgotPassword, resetPassword, ver
 // define authentication routes
 authRouter.post('/signup', signUp);
 authRouter.post('/verify-email', verifyOtp);
-authRouter.post('resend-verification', resendOtp);
+authRouter.post('/resend-verification', resendOtp);
 authRouter.post('/login', logIn);
 authRouter.post('/forgot-password', forgotPassword);
 authRouter.post('/verify-otp', verifyResetOtp);

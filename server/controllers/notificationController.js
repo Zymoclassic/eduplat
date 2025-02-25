@@ -1,9 +1,5 @@
 const Notification = require("../model/Notification");
-const {
-  isValidObjectId,
-  isValidUserModel,
-  sendRealTimeNotification,
-} = require("../utils/notificationMiddleware");
+const { isValidObjectId, isValidUserModel, sendRealTimeNotification } = require("../utils/notificationMiddleware");
 
 // Send a new notification
 const sendNotification = async (req, res) => {
@@ -21,10 +17,6 @@ const sendNotification = async (req, res) => {
     await notification.save();
 
     sendRealTimeNotification(userId, notification);
-
-    if (deviceToken) {
-      sendPushNotification(deviceToken, title, message);
-    }
 
     res.status(201).json({ success: true, notification });
   } catch (error) {
@@ -54,7 +46,7 @@ const getUserNotifications = async (req, res) => {
 // Mark a notification as read
 const markAsRead = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { userId, userModel, id } = req.params;
 
     if (!isValidObjectId(id)) {
       return res.status(400).json({ success: false, error: "Invalid notification ID" });

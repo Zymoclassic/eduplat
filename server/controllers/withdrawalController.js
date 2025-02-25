@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const Withdrawal = require("../model/Withdrawal");
 const Student = require("../model/Student");
 const Marketer = require("../model/Marketer");
+const { isValidObjectId, isValidUserModel, sendRealTimeNotification } = require("../utils/notificationMiddleware");
 
 
 
@@ -76,8 +77,25 @@ const updateWithdrawalStatus = async (req, res) => {
             });
         }
 
+        const withdrawalMessage = `Hello ${user.firstName}, You just intiated a withdrawal request of ₦${withdrawal.amount}. Your payment will arrive shortly.`;
+
+        // ✅ **Send In-App Notification**
+        const notification = new Notification({
+            user: id,
+            userModel: user.userType.charAt(0).toUpperCase() + user.userType.slice(1).toLowerCase(),
+            title: "Withdrawal initiated",
+            message: withdrawalMessage,
+            type: "message",
+        });
+        
+        // Send in-app notification
+        sendRealTimeNotification(id, withdrawalMessage);
+
+
         await withdrawal.save();
         await user.save();
+        await notification.save();
+
 
         return res.status(200).json({ message: `Withdrawal ${status} successfully.` });
 
@@ -220,6 +238,22 @@ const verifyWithdrawal = async (req, res) => {
         }
 
         await user.save();
+
+        const withdrawalMessage = `Hello ${user.firstName}, You just intiated a withdrawal request of ₦${withdrawal.amount}. Your payment will arrive shortly.`;
+
+        // ✅ **Send In-App Notification**
+        const notification = new Notification({
+            user: id,
+            userModel: user.userType.charAt(0).toUpperCase() + user.userType.slice(1).toLowerCase(),
+            title: "Withdrawal initiated",
+            message: withdrawalMessage,
+            type: "message",
+        });
+        
+        // Send in-app notification
+        sendRealTimeNotification(id, withdrawalMessage);
+
+        await notification.save();
 
         return res.status(200).json({ message: "Withdrawal request verified successfully. Processing..." });
 

@@ -6,8 +6,8 @@ const {  sendNotification, getUserNotifications, markAsRead } = require("../cont
 
 // define the routes
 notificationRouter.post('/', sendNotification);
-notificationRouter.get('/:userId', getUserNotifications);
-notificationRouter.put('/:userId/read', markAsRead);
+notificationRouter.get('/:userModel/:userId', getUserNotifications);
+notificationRouter.put('/:userModel/:userId/:id', markAsRead);
 
 
 module.exports = notificationRouter;
