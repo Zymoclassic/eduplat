@@ -357,10 +357,13 @@ const handleWebhook = async (req, res) => {
             }
 
             // ✅ Credit ₦20,000 **ONLY on first payment AND if the student has a referrer**
-            if (user.payments.length === 1 && user.referrerID) {
-                user.balance += 20000;
-                console.log(`Student ${user.email} credited with ₦20,000 on first payment (Referrer: ${user.referrerID}).`);
+            if (user.referrerID) {
 
+                if (coursePayment.amountPayable === amount || amount * 0.6) {
+                    user.balance += 20000;
+                    console.log(`Student ${user.email} credited with ₦20,000 on first payment (Referrer: ${user.referrerID}).`);
+                }
+               
                 const referrer = await Marketer.findById(user.referrerID);
                 if (referrer) {
                     await sendReferrerNotification(referrer.email, user.firstName, amount);

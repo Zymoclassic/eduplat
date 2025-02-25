@@ -13,5 +13,6 @@ authRouter.post('/forgot-password', forgotPassword);
 authRouter.post('/verify-otp', verifyResetOtp);
 authRouter.post('/reset-password', resetPassword);
 
+
 module.exports = authRouter;
 

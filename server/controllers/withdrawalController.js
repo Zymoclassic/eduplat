@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const Withdrawal = require("../model/Withdrawal");
 const Student = require("../model/Student");
 const Marketer = require("../model/Marketer");
+const Notification = require("../model/Notification");
 const { isValidObjectId, isValidUserModel, sendRealTimeNotification } = require("../utils/notificationMiddleware");
 
 
@@ -77,19 +78,20 @@ const updateWithdrawalStatus = async (req, res) => {
             });
         }
 
-        const withdrawalMessage = `Hello ${user.firstName}, You just intiated a withdrawal request of ₦${withdrawal.amount}. Your payment will arrive shortly.`;
+        const withdrawalMessage = `Hello ${user.firstName}, Your withdrawal request of ₦${withdrawal.amount} has been ${withdrawal.status}.`;
+        const userType = user.userType.charAt(0).toUpperCase() + user.userType.slice(1).toLowerCase();
 
         // ✅ **Send In-App Notification**
         const notification = new Notification({
-            user: id,
-            userModel: user.userType.charAt(0).toUpperCase() + user.userType.slice(1).toLowerCase(),
-            title: "Withdrawal initiated",
+            user: user._id,
+            userModel: userType,
+            title: `Withdrawal ${status}`,
             message: withdrawalMessage,
             type: "message",
         });
         
         // Send in-app notification
-        sendRealTimeNotification(id, withdrawalMessage);
+        sendRealTimeNotification(user._id, withdrawalMessage);
 
 
         await withdrawal.save();
