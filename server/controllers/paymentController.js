@@ -356,10 +356,10 @@ const handleWebhook = async (req, res) => {
                 console.log(`Student ${user.email} enrolled in course ${courseId}`);
             }
 
-            // ✅ Credit ₦20,000 **ONLY on first payment AND if the student has a referrer**
+            // ✅ Credit ₦20,000 **ONLY on first payment for a particular course AND if the student has a referrer**
             if (user.referrerID) {
 
-                if (coursePayment.amountPayable === amount || amount * 0.6) {
+                if (amount === coursePrice || coursePrice * 0.6) {
                     user.balance += 20000;
                     console.log(`Student ${user.email} credited with ₦20,000 on first payment (Referrer: ${user.referrerID}).`);
                 }
