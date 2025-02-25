@@ -202,6 +202,7 @@ const verifyWithdrawal = async (req, res) => {
         // Update the withdrawal status to "pending"
         withdrawal.status = "pending";
         withdrawal.verifiedAt = new Date(); // Store when it was verified
+        withdrawal.expiresAt = new Date("2099-12-31"); // Prevent expiry
         await withdrawal.save();
 
         const withdrawalIndex = user.withdrawalHistory.findIndex(w => w.withdrawalId.toString() === withdrawal._id.toString());
