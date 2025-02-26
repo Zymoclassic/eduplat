@@ -1,6 +1,7 @@
 const Student = require("../model/Student");
 const Course = require("../model/Course");
 const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
 const nodemailer = require('nodemailer');
 const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
@@ -151,6 +152,61 @@ const editStudentDetails = async (req, res, next) => {
 };
 
 
+//change password
+const changePassword = async (req, res) => {
+
+    const { id } = req.params;
+    const userId = req.user.id;
+
+
+    try {
+
+        if (id !== userId) {
+            return res.status(403).json({ message: "Unauthorized: You can only change your own password." });
+        }
+
+        const { oldPassword, newPassword, confirmPassword } = req.body;
+
+        if (!oldPassword || !newPassword || !confirmPassword) {
+            return res.status(400).json({ message: "Fill in all details" });
+        }
+
+        if (newPassword.trim().length < 8) {
+            return res.status(400).json({ message: "Password is too short. It must be at least 8 characters long." });
+        }
+
+        if (newPassword !== confirmPassword) {
+            return res.status(400).json({ message: "Passwords do not match." });
+        }
+
+        // Fetch user from the database
+        const student = await Student.findById(id);
+        if (!student) {
+            return res.status(404).json({ message: "Student not found." });
+        }
+
+        // Verify old password
+        const isMatch = await bcrypt.compare(oldPassword, student.password);
+        if (!isMatch) {
+            return res.status(400).json({ message: "Old password is incorrect." });
+        }
+
+        // Hash new password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+        // Update password in the database
+        student.password = hashedPassword;
+        await student.save();
+
+        return res.status(200).json({ message: "Password changed successfully." });
+
+    } catch (error) {
+        return res.status(500).json({ message: "An error occurred while processing the data.", error: error.message });
+    }
+};
+
+
 // check for enrolled courses
 const enrolledCourse = async (req, res) => {
     try {
@@ -188,6 +244,7 @@ module.exports = {
     getAllStudents,
     getStudent,
     editStudentDetails,
+    changePassword,
     enrolledCourse
 };
 

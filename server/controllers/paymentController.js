@@ -362,6 +362,16 @@ const handleWebhook = async (req, res) => {
                 if (!coursePayment || coursePayment.amountPaid === amount) {
                     user.balance += 20000;
                     console.log(`Student ${user.email} credited with ₦20,000 on first payment (Referrer: ${user.referrerID}).`);
+
+                    if (!user.earnings.some(earning => earning.reference === reference)) {
+                        user.earnings.push({
+                            amountEarned: 20000,
+                            reference,
+                            paymentDate: new Date()
+                        });
+                        console.log(`Earnings recorded for ${user.email}: ₦20,000.`);
+                    }
+                    
                 }
                
                 const referrer = await Marketer.findById(user.referrerID);
@@ -370,14 +380,6 @@ const handleWebhook = async (req, res) => {
                     console.log(`Referrer ${referrer.email} notified about ${user.email}'s payment.`);
                 }
 
-                if (!user.earnings.some(earning => earning.reference === reference)) {
-                    user.earnings.push({
-                        amountEarned: 20000,
-                        reference,
-                        paymentDate: new Date()
-                    });
-                    console.log(`Earnings recorded for ${user.email}: ₦20,000.`);
-                }
             }
 
             await user.save();

@@ -1,7 +1,7 @@
 const Marketer = require("../model/Marketer");
 const Student = require("../model/Student");
-const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
+const mongoose = require("mongoose");
 const nodemailer = require('nodemailer');
 const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
@@ -79,6 +79,61 @@ const editMarketerDetails = async (req, res, next) => {
 };
 
 
+//change password
+const changePassword = async (req, res) => {
+
+    const { id } = req.params;
+    const userId = req.user.id;
+
+
+    try {
+
+        if (id !== userId) {
+            return res.status(403).json({ message: "Unauthorized: You can only change your own password." });
+        }
+
+        const { oldPassword, newPassword, confirmPassword } = req.body;
+
+        if (!oldPassword || !newPassword || !confirmPassword) {
+            return res.status(400).json({ message: "Fill in all details" });
+        }
+
+        if (newPassword.trim().length < 8) {
+            return res.status(400).json({ message: "Password is too short. It must be at least 8 characters long." });
+        }
+
+        if (newPassword !== confirmPassword) {
+            return res.status(400).json({ message: "Passwords do not match." });
+        }
+
+        // Fetch user from the database
+        const marketer = await Marketer.findById(id);
+        if (!marketer) {
+            return res.status(404).json({ message: "Marketer not found." });
+        }
+
+        // Verify old password
+        const isMatch = await bcrypt.compare(oldPassword, marketer.password);
+        if (!isMatch) {
+            return res.status(400).json({ message: "Old password is incorrect." });
+        }
+
+        // Hash new password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+        // Update password in the database
+        marketer.password = hashedPassword;
+        await marketer.save();
+
+        return res.status(200).json({ message: "Password changed successfully." });
+
+    } catch (error) {
+        return res.status(500).json({ message: "An error occurred while processing the data.", error: error.message });
+    }
+};
+
+
 const getReferredStudentsWithDetails = async (req, res) => {
 
     try {
@@ -122,6 +177,7 @@ module.exports = {
     getAllMarketers,
     getMarketer,
     editMarketerDetails,
+    changePassword,
     getReferredStudentsWithDetails
 };
 
