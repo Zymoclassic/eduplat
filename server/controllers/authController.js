@@ -224,33 +224,36 @@ const verifyOtp = async (req, res) => {
 
     if (user.referrerID) {
         try {
-            const marketer = await Marketer.findOne({ marketerId: user.referrerID });
-
+            console.log("Referrer ID being searched:", user.referrerID);
+            const marketer = await Marketer.findOne({ _id: user.referrerID });
+    
             if (marketer) {
-                newReferrerID = marketer._id;
+                const newReferrerID = marketer._id;
+                const newMessage = `Hi ${marketer.firstName}, a student you referred ${user.firstName} has created an account.`;
+    
+                // ✅ **Send In-App Notification**
+                const notification = new Notification({
+                    user: newReferrerID,
+                    userModel: "Marketer",
+                    title: "That student just created an account!",
+                    message: newMessage,
+                    type: "message",
+                });
+    
+                // Send in-app notification
+                sendRealTimeNotification(newReferrerID, newMessage);
+    
+                await notification.save();
+            } else {
+                console.log(`Marketer with ID ${user.referrerID} not found.`);
             }
-
-            const newMessage = `Hi ${marketer.firstName}, A student you referred ${user.firstName} has created an account.`;
-
-            // ✅ **Send In-App Notification**
-            const notification = new Notification({
-                user: newReferrerID,
-                userModel: "Marketer",
-                title: "That student just created an account!",
-                message: newMessage,
-                type: "message",
-            });
-            
-            // Send in-app notification
-            sendRealTimeNotification(newReferrerID, newMessage);
-            
-            await notification.save();
-
+    
         } catch (err) {
+            console.error("Error fetching marketer data:", err);
             return res.status(500).json({ message: "Error fetching marketer data." });
         }
-
     }
+    
 
     return res.status(200).json({
         message: `OTP verified successfully. Your ${userType} account is now active.`,
