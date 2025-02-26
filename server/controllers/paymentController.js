@@ -353,6 +353,7 @@ const handleWebhook = async (req, res) => {
             // ✅ Enroll student in course (push to studentsEnrolled array)
             if (!course.studentsEnrolled.includes(user._id)) {
                 course.studentsEnrolled.push(user._id);
+                await course.save();
                 console.log(`Student ${user.firstName} enrolled in course ${course.title}`);
             }
 
