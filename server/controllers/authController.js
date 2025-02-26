@@ -4,6 +4,8 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const nodemailer = require('nodemailer');
 const jwt = require("jsonwebtoken");
+const Notification = require("../model/Notification");
+const { isValidObjectId, isValidUserModel, sendRealTimeNotification } = require("../utils/notificationMiddleware");
 const dotenv = require("dotenv");
 dotenv.config();
 
@@ -217,13 +219,43 @@ const verifyOtp = async (req, res) => {
     user.emailVerified = true;
     user.otp = null;
     user.otpExpires = null;
+
     await user.save();
+
+    if (user.referrerID) {
+        try {
+            const marketer = await Marketer.findOne({ marketerId: user.referrerID });
+
+            if (marketer) {
+                newReferrerID = marketer._id;
+            }
+
+            const newMessage = `Hi ${marketer.firstName}, A student you referred ${user.firstName} has created an account.`;
+
+            // ✅ **Send In-App Notification**
+            const notification = new Notification({
+                user: newReferrerID,
+                userModel: "Marketer",
+                title: "That student just created an account!",
+                message: newMessage,
+                type: "message",
+            });
+            
+            // Send in-app notification
+            sendRealTimeNotification(newReferrerID, newMessage);
+            
+            await notification.save();
+
+        } catch (err) {
+            return res.status(500).json({ message: "Error fetching marketer data." });
+        }
+
+    }
 
     return res.status(200).json({
         message: `OTP verified successfully. Your ${userType} account is now active.`,
     });
 };
-
 
 
 const resendOtp = async (req, res) => {
