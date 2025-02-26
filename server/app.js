@@ -8,6 +8,7 @@ const mongoose = require("mongoose");
 const express = require("express");
 const cors = require("cors");
 
+
 // Import Routes
 const AuthRouter = require("./routes/AuthRoutes");
 const StudentRouter = require("./routes/StudentRoutes");

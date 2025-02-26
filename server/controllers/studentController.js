@@ -4,6 +4,9 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const nodemailer = require('nodemailer');
 const jwt = require("jsonwebtoken");
+const multer = require("multer");
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
+const cloudinary = require("../utils/cloudinary"); // Import Cloudinary config
 const dotenv = require("dotenv");
 dotenv.config();
 
@@ -49,72 +52,55 @@ const getStudent = async (req, res, next) => {
     return res.status(200).json({ student });
 };
 
-// change avatar
-// const changeDp = async (req, res, next) => {
-//     try {
-//         // Validate uploaded file
-//         if (!req.files || !req.files.image) {
-//             return res.status(422).json({ message: "Please select an image." });
-//         }
 
-//         const { image } = req.files;
+// Change Profile Picture
+const changeDp = async (req, res) => {
+    try {
 
-//         // Check file size (2MB max)
-//         if (image.size > 2 * 1024 * 1024) {
-//             return res.status(400).json({ message: "File too large. Please upload a file smaller than 2MB." });
-//         }
+        const { id } = req.params;
+        const userId = req.user.id;
 
-//         // Validate file type
-//         const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif"];
-//         if (!allowedTypes.includes(image.mimetype)) {
-//             return res.status(400).json({ message: "Invalid file type. Please upload a valid image." });
-//         }
+        if (id !== userId) {
+            return res.status(403).json({ message: "Unauthorized: You can only change your own profile image." });
+        }
 
-//         // Find the student
-//         const student = await Student.findById(req.student.id);
-//         if (!student) {
-//             return res.status(404).json({ message: "Student not found." });
-//         }
+        if (!req.file) {
+            return res.status(422).json({ message: "Please select an image." });
+        }
 
-//         // Check if the student has registered for at least one course
-//         if (!student.course || student.course.length === 0) {
-//             return res.status(403).json({ message: "You must be enrolled in at least one course to change your profile picture." });
-//         }
+        // Find the student
+        const student = await Student.findById(id);
+        if (!student) {
+            return res.status(404).json({ message: "Student not found." });
+        }
 
-//         // Delete pre-existing profile image if it exists
-//         if (student.image) {
-//             const oldFilePath = path.join(__dirname, "..", "uploads", student.image);
-//             try {
-//                 await fs.unlink(oldFilePath);
-//             } catch (err) {
-//                 console.error("Error deleting old image:", err.message);
-//             }
-//         }
+        // Check course enrollment
+        if (!student.payments || student.payments.length === 0) {
+            return res.status(403).json({ message: "You must be enrolled in at least one course to upload a profile image." });
+        }
 
-//         // Generate new unique filename
-//         const rnum = () => Math.floor(1000 + Math.random() * 9000).toString();
-//         const fileExtension = path.extname(image.name);
-//         const newFileName = `${rnum()}${fileExtension}`;
+        // Delete old Cloudinary image (if exists)
+        if (student.image) {
+            const publicIdMatch = student.image.match(/\/([^/]+)\.[a-z]+$/);
+            if (publicIdMatch) {
+                const publicId = `student_profiles/${publicIdMatch[1]}`;
+                await cloudinary.uploader.destroy(publicId);
+            }
+        }
 
-//         // Define upload path
-//         const uploadPath = path.join(__dirname, "..", "uploads", newFileName);
+        // Save new image URL from multer-cloudinary
+        student.image = req.file.path;
+        await student.save();
 
-//         // Move uploaded file to destination
-//         await image.mv(uploadPath);
-
-//         // Update student record with the new image filename
-//         student.image = newFileName;
-//         await student.save();
-
-//         return res.status(200).json({
-//             message: "File successfully uploaded.",
-//             image: newFileName,
-//         });
-//     } catch (err) {
-//         console.error("Error processing request:", err);
-//         return res.status(500).json({ message: "An error occurred while processing your request." });
-//     }
-// };
+        return res.status(200).json({
+            message: "File successfully uploaded.",
+            image: student.image,
+        });
+    } catch (err) {
+        console.error("Error processing request:", err);
+        return res.status(500).json({ message: "An error occurred while processing your request." });
+    }
+};
 
 
 // update user details
@@ -244,6 +230,7 @@ module.exports = {
     getAllStudents,
     getStudent,
     editStudentDetails,
+    changeDp,
     changePassword,
     enrolledCourse
 };

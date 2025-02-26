@@ -353,7 +353,7 @@ const handleWebhook = async (req, res) => {
             // ✅ Enroll student in course (push to studentsEnrolled array)
             if (!course.studentsEnrolled.includes(user._id)) {
                 course.studentsEnrolled.push(user._id);
-                console.log(`Student ${user.email} enrolled in course ${courseId}`);
+                console.log(`Student ${user.firstName} enrolled in course ${course.title}`);
             }
 
             // ✅ Credit ₦20,000 **ONLY on first payment for a particular course AND if the student has a referrer**
@@ -371,7 +371,7 @@ const handleWebhook = async (req, res) => {
                         });
                         console.log(`Earnings recorded for ${user.email}: ₦20,000.`);
                     }
-                    
+
                 }
                
                 const referrer = await Marketer.findById(user.referrerID);
