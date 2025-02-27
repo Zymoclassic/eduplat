@@ -49,7 +49,7 @@ const studentSchema = new Schema({
     },
     image: {
         type: String,
-        default: null
+        default: "https://res.cloudinary.com/dq5puvtne/image/upload/v1740648447/next_crib_avatar_jled2z.jpg"
     },
     referrerID: {
         type: mongoose.Types.ObjectId,

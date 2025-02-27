@@ -4,7 +4,7 @@ const { isValidObjectId, isValidUserModel, sendRealTimeNotification } = require(
 // Send a new notification
 const sendNotification = async (req, res) => {
   try {
-    const { userId, userModel, title, message, type, deviceToken } = req.body;
+    const { userId, userModel, title, message, type } = req.body;
 
     if (!isValidObjectId(userId)) {
       return res.status(400).json({ success: false, error: "Invalid userId" });

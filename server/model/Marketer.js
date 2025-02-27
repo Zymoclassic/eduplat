@@ -16,6 +16,10 @@ const marketerSchema = new Schema({
         required: true,
         unique: true
     },
+    image: {
+        type: String,
+        default: "https://res.cloudinary.com/dq5puvtne/image/upload/v1740648447/next_crib_avatar_jled2z.jpg"
+    },
     emailVerified: { 
         type: Boolean,
         default: false 
